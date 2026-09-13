@@ -1,0 +1,15 @@
+.venv/
+.env
+
+indictrans2-en-indic-1B/
+indictrans2-int4/
+
+__pycache__/
+*.pyc
+
+*.pth
+*.bin
+*.safetensors
+
+*.save
+.DS_Store

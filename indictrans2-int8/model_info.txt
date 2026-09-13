@@ -1,0 +1,14 @@
+IndicTrans2 INT8 Quantized Model
+================================
+
+Original FP32 parameters: 1115543552
+Parameters in billions: 1.115544
+FP32 raw size: 4.1557 GiB
+Quantized Linear layers: 289
+INT8 Linear weight parameters: 956088320
+INT8 raw Linear weight size: 0.8904 GiB
+Actual INT8 checkpoint size: 1.4854 GiB
+Actual INT8 checkpoint size: 1.5949 GB
+Quantization: PyTorch Dynamic INT8
+Quantized dtype: torch.qint8
+Quantized backend: qnnpack
