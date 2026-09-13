@@ -12,4 +12,7 @@ __pycache__/
 *.safetensors
 
 *.save
-.DS_Store
+.DS_Storeindictrans2-int8.pth
+indictrans2-int8/
+.venv/
+__pycache__/

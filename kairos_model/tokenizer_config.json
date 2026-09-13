@@ -1,0 +1,51 @@
+{
+  "added_tokens_decoder": {
+    "0": {
+      "content": "<s>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "1": {
+      "content": "<pad>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "2": {
+      "content": "</s>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "3": {
+      "content": "<unk>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    }
+  },
+  "bos_token": "<s>",
+  "clean_up_tokenization_spaces": true,
+  "do_lower_case": false,
+  "eos_token": "</s>",
+  "model_max_length": 256,
+  "pad_token": "<pad>",
+  "name_or_path": "ai4bharat/indictrans2-en-indic-1B",
+  "tokenizer_class": "IndicTransTokenizer",
+  "auto_map": {
+    "AutoTokenizer": [
+      "tokenization_indictrans.IndicTransTokenizer",
+      null
+    ]
+  },
+  "unk_token": "<unk>"
+}
