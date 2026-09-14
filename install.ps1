@@ -21,10 +21,10 @@ Write-Host "============================================"
 Write-Host ""
 
 # ------------------------------------------------------------
-# 1. FIND PYTHON 3.12
+# 1. CHECK / INSTALL PYTHON 3.12
 # ------------------------------------------------------------
 
-Write-Host "[1/7] Checking Python..."
+Write-Host "[1/8] Checking Python 3.12..."
 
 $PythonCommand = $null
 
@@ -36,7 +36,6 @@ if ($PyLauncher) {
 
         if ($LASTEXITCODE -eq 0) {
             $PythonCommand = "py"
-            Write-Host "      Using Python 3.12"
         }
     }
     catch {
@@ -45,35 +44,151 @@ if ($PyLauncher) {
 }
 
 if (-not $PythonCommand) {
-    Write-Host ""
-    Write-Host "ERROR: Python 3.12 was not found." -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Please install Python 3.12 and run the installer again."
-    Write-Host ""
-    Write-Host "Command:"
-    Write-Host "    winget install Python.Python.3.12"
-    Write-Host ""
-    exit 1
+
+    Write-Host "      Python 3.12 not found."
+    Write-Host "      Installing Python 3.12..."
+
+    $Winget = Get-Command winget -ErrorAction SilentlyContinue
+
+    if (-not $Winget) {
+        throw "Windows Package Manager (winget) was not found. Please install App Installer from Microsoft Store."
+    }
+
+    winget install `
+        --id Python.Python.3.12 `
+        --exact `
+        --scope user `
+        --accept-source-agreements `
+        --accept-package-agreements
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Python 3.12 installation failed."
+    }
+
+    # Refresh PATH
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") +
+                ";" +
+                [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+    $PyLauncher = Get-Command py -ErrorAction SilentlyContinue
+
+    if (-not $PyLauncher) {
+        throw "Python launcher was not found after installation. Please open a new PowerShell window and run the installer again."
+    }
+
+    & py -3.12 --version *> $null
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Python 3.12 was installed but could not be detected."
+    }
+
+    $PythonCommand = "py"
 }
 
 $PythonVersion = & py -3.12 --version
+
 Write-Host "      $PythonVersion"
 
 # ------------------------------------------------------------
-# 2. CREATE KAIROS ENVIRONMENT
+# 2. CHECK / INSTALL MICROSOFT C++ BUILD TOOLS
 # ------------------------------------------------------------
 
-Write-Host "[2/7] Creating KAIROS environment..."
+Write-Host "[2/8] Checking Microsoft C++ Build Tools..."
 
-New-Item -ItemType Directory -Force -Path $KairosHome | Out-Null
-New-Item -ItemType Directory -Force -Path $KairosBin | Out-Null
-New-Item -ItemType Directory -Force -Path $ModelDir | Out-Null
+$VsWherePaths = @(
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe",
+    "${env:ProgramFiles}\Microsoft Visual Studio\Installer\vswhere.exe"
+)
+
+$VsWhere = $null
+
+foreach ($Path in $VsWherePaths) {
+    if ($Path -and (Test-Path $Path)) {
+        $VsWhere = $Path
+        break
+    }
+}
+
+$BuildToolsFound = $false
+
+if ($VsWhere) {
+
+    $Installation = & $VsWhere `
+        -latest `
+        -products * `
+        -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+        -property installationPath 2>$null
+
+    if ($Installation) {
+        $BuildToolsFound = $true
+    }
+}
+
+if ($BuildToolsFound) {
+
+    Write-Host "      C++ Build Tools already installed."
+
+}
+else {
+
+    Write-Host "      C++ Build Tools not found."
+    Write-Host "      Installing Microsoft Visual Studio Build Tools..."
+    Write-Host ""
+    Write-Host "      Windows may request administrator permission."
+    Write-Host ""
+
+    $Winget = Get-Command winget -ErrorAction SilentlyContinue
+
+    if (-not $Winget) {
+        throw "Windows Package Manager (winget) was not found."
+    }
+
+    winget install `
+        --id Microsoft.VisualStudio.2022.BuildTools `
+        --exact `
+        --scope machine `
+        --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended" `
+        --accept-source-agreements `
+        --accept-package-agreements
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Microsoft C++ Build Tools installation failed."
+    }
+
+    Write-Host "      C++ Build Tools installed."
+
+    # Refresh PATH
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") +
+                ";" +
+                [System.Environment]::GetEnvironmentVariable("Path", "User")
+}
 
 # ------------------------------------------------------------
-# 3. DOWNLOAD KAIROS APPLICATION
+# 3. CREATE KAIROS ENVIRONMENT
 # ------------------------------------------------------------
 
-Write-Host "[3/7] Downloading KAIROS application..."
+Write-Host "[3/8] Creating KAIROS environment..."
+
+New-Item `
+    -ItemType Directory `
+    -Force `
+    -Path $KairosHome | Out-Null
+
+New-Item `
+    -ItemType Directory `
+    -Force `
+    -Path $KairosBin | Out-Null
+
+New-Item `
+    -ItemType Directory `
+    -Force `
+    -Path $ModelDir | Out-Null
+
+# ------------------------------------------------------------
+# 4. DOWNLOAD KAIROS APPLICATION
+# ------------------------------------------------------------
+
+Write-Host "[4/8] Downloading KAIROS application..."
 
 Invoke-WebRequest `
     "$Repo/cli.py" `
@@ -114,10 +229,10 @@ foreach ($File in $ModelFiles) {
 Write-Host "      KAIROS application downloaded."
 
 # ------------------------------------------------------------
-# 4. CREATE VENV + INSTALL DEPENDENCIES
+# 5. CREATE VENV + INSTALL DEPENDENCIES
 # ------------------------------------------------------------
 
-Write-Host "[4/7] Preparing Python runtime..."
+Write-Host "[5/8] Preparing Python runtime..."
 
 if (-not (Test-Path "$KairosVenv\Scripts\python.exe")) {
 
@@ -134,6 +249,10 @@ $KairosPip = "$KairosVenv\Scripts\pip.exe"
 Write-Host "      Upgrading pip..."
 
 & $KairosPython -m pip install --upgrade pip --quiet
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to upgrade pip."
+}
 
 Write-Host "      Installing dependencies..."
 
@@ -152,10 +271,10 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "      Runtime ready."
 
 # ------------------------------------------------------------
-# 5. DOWNLOAD INT8 MODEL
+# 6. DOWNLOAD INT8 MODEL
 # ------------------------------------------------------------
 
-Write-Host "[5/7] Preparing INT8 translation model..."
+Write-Host "[6/8] Preparing INT8 translation model..."
 
 if (Test-Path $ModelFile) {
 
@@ -179,10 +298,10 @@ else {
 }
 
 # ------------------------------------------------------------
-# 6. VERIFY MODEL
+# 7. VERIFY MODEL
 # ------------------------------------------------------------
 
-Write-Host "[6/7] Verifying INT8 model..."
+Write-Host "[7/8] Verifying INT8 model..."
 
 $ActualSHA256 = (
     Get-FileHash `
@@ -211,10 +330,10 @@ if ($ActualSHA256 -ne $ExpectedSHA256) {
 Write-Host "      SHA-256: OK"
 
 # ------------------------------------------------------------
-# 7. INSTALL KAIROS COMMAND
+# 8. INSTALL KAIROS COMMAND
 # ------------------------------------------------------------
 
-Write-Host "[7/7] Installing KAIROS command..."
+Write-Host "[8/8] Installing KAIROS command..."
 
 $Launcher = @"
 @echo off
@@ -228,7 +347,9 @@ Set-Content `
     -Value $Launcher `
     -Encoding ASCII
 
-# Add KAIROS bin directory to USER PATH if missing
+# ------------------------------------------------------------
+# ADD KAIROS TO USER PATH
+# ------------------------------------------------------------
 
 $CurrentPath = [Environment]::GetEnvironmentVariable(
     "Path",
@@ -257,10 +378,17 @@ if ($PathEntries -notcontains $KairosBin) {
     )
 
     Write-Host "      Added KAIROS to user PATH."
+
 }
 else {
+
     Write-Host "      KAIROS already exists in user PATH."
+
 }
+
+# ------------------------------------------------------------
+# COMPLETE
+# ------------------------------------------------------------
 
 Write-Host ""
 Write-Host "============================================"
